@@ -1,2 +1,2 @@
 # machine-learning-projects
-project-based learning
+project-based learning with zoomcamp
