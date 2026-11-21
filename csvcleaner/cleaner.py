@@ -34,37 +34,75 @@ def fill_missing(rows, placeholder='N/A'):
                 row[index] = placeholder
     return rows
 
-def remove_duplicates(rows):
+def remove_duplicates(rows, ignore_first_col=False):
     unique_rows = []
+    seen = []
+
     for row in rows:
-        if row not in unique_rows:
+        fingerprint = row[1:] if ignore_first_col else row
+        if fingerprint not in seen:
+            seen.append(fingerprint)
             unique_rows.append(row)
     return unique_rows
 
-    
-            
 parser = argparse.ArgumentParser(description='Enter the path to your CSV file')
 parser.add_argument('input_file', help='Path to the input CSV file')
 parser.add_argument('output_file', help='Path to the output CSV file')
 args = parser.parse_args()
+
 with open(args.input_file.strip(), newline='') as file:
     reader = csv.reader(file)
     rows = list(reader)
+
+choice = input("Does your CSV file have a header row? (y/n): ")
+if choice.lower() in ['y', 'yes']:
+    header = rows[0]
+    header = strip_whitespace([header])[0]  # Strip whitespace from header
+    data = rows[1:]
+else:
+    data = rows
+    header = None
+    print("No header row detected. Proceeding without a header.")
+
 choice = input("Do you want to strip whitespaces from the cells? (y/n): ")
 if choice.lower() in ['y', 'yes']:
-    rows = strip_whitespace(rows)
+    data = strip_whitespace(data)
+else:
+    print("Skipping whitespace stripping.")
+
+should_pad = False
 choice = input("Do you want pad rows to the same length as the longest row? (y/n): ")
 if choice.lower() in ['y', 'yes']:
-    rows = pad_rows(rows)
+    data = pad_rows(data)
+    should_pad = True
+else: 
+    print("Skipping row padding.")
+
 choice = input("Do you want to fill missing values with a placeholder? (y/n): ")
 if choice.lower() in ['y', 'yes']:
     placeholder = input("Enter the placeholder value (default is 'N/A'): ")
     if placeholder.strip() == '':
         placeholder = 'N/A'
-    rows = fill_missing(rows, placeholder)
+    data = fill_missing(data, placeholder)
+else:
+    print("Skipping missing value filling.")
+
 choice = input("Do you want to remove duplicate rows? (y/n): ")
 if choice.lower() in ['y', 'yes']:
-    rows = remove_duplicates(rows)
+    ignore_first_col = input("Do you want to ignore the first column when checking for duplicates? (y/n): ")
+    ignore_first_col = ignore_first_col.lower() in ['y', 'yes']
+    if ignore_first_col:
+        print("Duplicates will be removed based on all columns except the first one.")
+        data = remove_duplicates(data, ignore_first_col=True)
+    else:
+        print("Duplicates will be removed based on all columns.")
+        data = remove_duplicates(data)
+else:
+    print("Skipping duplicate row removal.")
+
+rows = [header] + data if header else data
+if should_pad:
+    rows = pad_rows(rows)
 
 with open(args.output_file.strip(), 'w', newline='') as csvfile:
     writer = csv.writer(csvfile)
