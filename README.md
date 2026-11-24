@@ -1,5 +1,5 @@
 # CSV Cleaner
-CSV cleaner takes a csv file and optionally: 
+CSV cleaner takes a CSV file and optionally: 
 - removes whitespaces
 - pads rows
 - fills missing values
