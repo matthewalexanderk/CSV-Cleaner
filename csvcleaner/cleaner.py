@@ -5,7 +5,6 @@ def strip_whitespace(rows):
     # looks at the first cell of each row and removes any leading or trailing whitespace from the cell
     # flow is this: you get a row from the csv file, then you get the first cell of that row, then you strip the whitespace from that cell, then you return the row with the stripped cell
     return [[item.strip() for item in cell] for cell in rows]
-            
 
 def pad_rows(rows):
     
@@ -34,14 +33,14 @@ def fill_missing(rows, placeholder='N/A'):
                 row[index] = placeholder
     return rows
 
-def remove_duplicates(rows, ignore_first_col=False):
+def remove_duplicates(rows, key_cols=None):
     unique_rows = []
-    seen = []
+    seen = set()
 
     for row in rows:
-        fingerprint = row[1:] if ignore_first_col else row
+        fingerprint = tuple(row[i] for i in key_cols) if key_cols else tuple(row)
         if fingerprint not in seen:
-            seen.append(fingerprint)
+            seen.add(fingerprint)
             unique_rows.append(row)
     return unique_rows
 
@@ -58,11 +57,14 @@ choice = input("Does your CSV file have a header row? (y/n): ")
 if choice.lower() in ['y', 'yes']:
     header = rows[0]
     header = strip_whitespace([header])[0]  # Strip whitespace from header
+    lower_header = [col.lower() for col in header]
     data = rows[1:]
 else:
     data = rows
     header = None
+    lower_header = None
     print("No header row detected. Proceeding without a header.")
+
 
 choice = input("Do you want to strip whitespaces from the cells? (y/n): ")
 if choice.lower() in ['y', 'yes']:
@@ -89,14 +91,45 @@ else:
 
 choice = input("Do you want to remove duplicate rows? (y/n): ")
 if choice.lower() in ['y', 'yes']:
-    ignore_first_col = input("Do you want to ignore the first column when checking for duplicates? (y/n): ")
-    ignore_first_col = ignore_first_col.lower() in ['y', 'yes']
-    if ignore_first_col:
-        print("Duplicates will be removed based on all columns except the first one.")
-        data = remove_duplicates(data, ignore_first_col=True)
+
+    choice = input("Do you want to use column-based or index-based keys to uniquely identify rows? (y/n): ")
+    if choice.lower() in ['y', 'yes']:
+        key_type = input("Enter 'column' for column-based keys or 'index' for index-based keys: ")
+        if key_type.lower() == 'column':
+            if not lower_header:
+                print("No header row detected. Cannot use column-based keys. Moving onto index-based keys.")
+            else:
+                key_columns = input("Enter the names of the columns separated by commas to create a unique key: ").strip().lower()
+                keys_cols = []
+                valid = True
+                for col in key_columns.split(','):
+                    col = col.strip()
+                    if col in lower_header:
+                        keys_cols.append(lower_header.index(col))
+                    else:
+                        valid = False
+                        print(f"Column '{col}' not found in header. Skipping duplicate removal.")
+                        break
+                if valid:
+                    data = remove_duplicates(data, key_cols=keys_cols)
+
+        elif key_type.lower() == 'index':
+            try:
+                key_index = input("Enter the index of the column separated by commas to use as a key (0-based): ").strip()
+
+                keys_index = []
+                valid = True
+                for key in key_index.split(','):
+                    keys_index.append(int(key.strip()))
+
+                data = remove_duplicates(data, key_cols=keys_index)
+            except (ValueError, IndexError):
+                print("One or more invalid indices provided. Skipping duplicate removal.")
+        else:
+            print("Invalid index.")
     else:
-        print("Duplicates will be removed based on all columns.")
         data = remove_duplicates(data)
+        print("Duplicates will be removed based on all columns.")
 else:
     print("Skipping duplicate row removal.")
 
